@@ -60,7 +60,7 @@ class AuthService {
     }
   }
 
-  // 🔄 MÉTODO PRIVADO PARA SINCRONIZAR CON MONGODB
+  // En auth_service.dart - REEMPLAZAR EL MÉTODO _syncUserWithMongoDB
   static Future<Map<String, dynamic>> _syncUserWithMongoDB(int springId, String nombre, String email) async {
     try {
       print('🔄 [AUTH] Sincronizando usuario con MongoDB...');
@@ -79,12 +79,11 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final syncData = json.decode(response.body);
-        _mongoUserId = syncData['mongoId'];
+        _mongoUserId = syncData['mongoId']; // ✅ ObjectId válido de MongoDB
 
         print('✅ [AUTH] Usuario sincronizado con MongoDB');
         print('📋 [AUTH] MongoId: $_mongoUserId');
         print('📋 [AUTH] SpringId: $springId');
-        print('📋 [AUTH] Email: $email');
 
         // ✅ CONFIGURAR EL MONGO ID EN EL SERVICIO DE PROGRESO
         ProgresoService.setMongoUserId(_mongoUserId!);
@@ -97,31 +96,16 @@ class AuthService {
         };
       } else {
         print('⚠️ [AUTH] Error en sincronización: ${response.statusCode}');
-        // Fallback: crear un mongoId basado en el springId
-        _mongoUserId = 'spring_$springId';
-        ProgresoService.setMongoUserId(_mongoUserId!);
+        print('📋 [AUTH] Respuesta del servidor: ${response.body}');
 
-        result = {
-          'success': false,
-          'mongoId': _mongoUserId,
-          'springId': springId,
-          'error': 'HTTP ${response.statusCode}'
-        };
+        // ❌ NO USAR spring_1 - Mejor lanzar excepción
+        throw Exception('No se pudo sincronizar con MongoDB: ${response.statusCode}');
       }
 
       return result;
     } catch (e) {
       print('❌ [AUTH] Error sincronizando con MongoDB: $e');
-      // Fallback en caso de error
-      _mongoUserId = 'spring_$springId';
-      ProgresoService.setMongoUserId(_mongoUserId!);
-
-      return {
-        'success': false,
-        'mongoId': _mongoUserId,
-        'springId': springId,
-        'error': e.toString()
-      };
+      throw Exception('Error de sincronización: $e');
     }
   }
 

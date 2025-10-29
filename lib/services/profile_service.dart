@@ -5,7 +5,7 @@ import 'api_service.dart';
 
 class ProfileService {
   //static const String baseUrl = 'http://localhost:8080/api/auth';
-  static const String baseUrl = 'http://10.0.2.2:8080/api/auth';
+  static String get baseUrl => ApiService.springBaseUrl;
   // Obtener perfil del usuario
   static Future<UserProfile> getUserProfile(int userId) async {
     try {

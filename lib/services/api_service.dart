@@ -1,22 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:io' show Platform;
-
+import '../config/app_config.dart';
 class ApiService {
   // ✅ DETECCIÓN AUTOMÁTICA DEL ENTORNO
-  static String get springBaseUrl {
-    // Si estamos en emulador Android, usar 10.0.2.2
-    // Si estamos en web o iOS simulator, usar localhost
-    final isAndroid = Platform.isAndroid;
-    final base = isAndroid ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
-    return '$base/api/auth';
-  }
-
-  static String get nodeBaseUrl {
-    final isAndroid = Platform.isAndroid;
-    final base = isAndroid ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
-    return '$base/api/auth';
-  }
+  static String get springBaseUrl => AppConfig.springBaseUrl;
+  static String get nodeBaseUrl => AppConfig.nodeBaseUrl;
 
   // ✅ MÉTODO PARA DEBUG - MOSTRAR CONFIGURACIÓN ACTUAL
   static void printConfig() {

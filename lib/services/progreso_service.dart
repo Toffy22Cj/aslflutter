@@ -6,15 +6,7 @@ import 'api_service.dart';
 
 class ProgresoService {
   // ✅ URL BASE CORREGIDA PARA TODAS LAS PLATAFORMAS
-  static String get baseUrl {
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000/api/progreso';
-    } else if (Platform.isIOS) {
-      return 'http://localhost:3000/api/progreso';
-    } else {
-      return 'http://localhost:3000/api/progreso';
-    }
-  }
+  static String get baseUrl => '${ApiService.nodeBaseUrl}/progreso';
 
   // ✅ VARIABLE PARA ALMACENAR EL MONGO ID
   static String? _mongoUserId;
@@ -42,20 +34,20 @@ class ProgresoService {
   }
 
   // ✅ MÉTODO PRINCIPAL CORREGIDO CON MEJOR MANEJO DE ERRORES
-  static Future<Map<String, dynamic>> obtenerProgresoCompletoConId(String userId) async {
+  static Future<Map<String, dynamic>> obtenerProgresoCompletoConId(String _mongoUserId) async {
     try {
-      print('🌐 [PROGRESO] Conectando a: $baseUrl/$userId/completo');
-      print('👤 [PROGRESO] UserId tipo: ${userId.runtimeType}');
-      print('🔍 [PROGRESO] UserId valor: $userId');
+      print('🌐 [PROGRESO] Conectando a: $baseUrl/$_mongoUserId/completo');
+      print('👤 [PROGRESO] UserId tipo: ${_mongoUserId.runtimeType}');
+      print('🔍 [PROGRESO] UserId valor: $_mongoUserId');
 
       // Validar que el userId no sea nulo o vacío
-      if (userId.isEmpty || userId == 'null') {
-        print('❌ [PROGRESO] userId inválido: $userId');
+      if (_mongoUserId.isEmpty || _mongoUserId == 'null') {
+        print('❌ [PROGRESO] userId inválido: $_mongoUserId');
         return _crearProgresoVacio('unknown');
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/$userId/completo'),
+        Uri.parse('$baseUrl/$_mongoUserId/completo'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': ApiService.headers['Authorization'] ?? '',
@@ -69,12 +61,12 @@ class ProgresoService {
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
         print('✅ [PROGRESO] Datos reales obtenidos del servidor');
-        return jsonResponse['data'] ?? _crearProgresoVacio(userId);
+        return jsonResponse['data'] ?? _crearProgresoVacio(_mongoUserId);
       }
       else if (response.statusCode == 400) {
         print('❌ [PROGRESO] Error 400 - Bad Request');
         print('💡 [PROGRESO] Posibles causas:');
-        print('   • userId inválido: $userId');
+        print('   • userId inválido: $_mongoUserId');
         print('   • Problema de validación en el servidor');
         print('   • Headers incorrectos');
 
@@ -86,19 +78,19 @@ class ProgresoService {
           print('📝 [PROGRESO] Respuesta del servidor: ${response.body}');
         }
 
-        return _crearProgresoVacio(userId);
+        return _crearProgresoVacio(_mongoUserId);
       }
       else if (response.statusCode == 404) {
         print('📭 [PROGRESO] No se encontró progreso (404) - Creando nuevo');
-        return _crearProgresoVacio(userId);
+        return _crearProgresoVacio(_mongoUserId);
       }
       else {
         print('⚠️ [PROGRESO] Servidor respondió con: ${response.statusCode}');
-        return _crearProgresoVacio(userId);
+        return _crearProgresoVacio(_mongoUserId);
       }
     } catch (e) {
       print('❌ [PROGRESO] Error de conexión: $e');
-      return _crearProgresoVacio(userId);
+      return _crearProgresoVacio(_mongoUserId);
     }
   }
 
@@ -108,10 +100,10 @@ class ProgresoService {
 
     try {
       print('🎮 [PROGRESO] Obteniendo detalle de módulo: $moduloId');
-      print('🌐 [PROGRESO] URL: $baseUrl/$userId/modulo/$moduloId/juegos');
+      print('🌐 [PROGRESO] URL: $baseUrl/$_mongoUserId/modulo/$moduloId/juegos');
 
       final response = await http.get(
-        Uri.parse('$baseUrl/$userId/modulo/$moduloId/juegos'),
+        Uri.parse('$baseUrl/$_mongoUserId/modulo/$moduloId/juegos'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': ApiService.headers['Authorization'] ?? '',
@@ -141,7 +133,7 @@ class ProgresoService {
     print('\n🔍 [DEBUG] Iniciando diagnóstico de conexión...');
     print('📱 Plataforma: ${Platform.operatingSystem}');
     print('🔗 URL Base: $baseUrl');
-    print('👤 UserId: $userId');
+    print('👤 UserId: $_mongoUserId');
     print('🔑 Token: ${ApiService.headers['Authorization']?.substring(0, 20)}...');
 
     try {
@@ -172,7 +164,7 @@ class ProgresoService {
       // Probar el endpoint real con los headers completos
       print('\n3. 🧪 Probando endpoint real...');
       final realResponse = await http.get(
-        Uri.parse('$baseUrl/$userId/completo'),
+        Uri.parse('$baseUrl/$_mongoUserId/completo'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': ApiService.headers['Authorization'] ?? '',
@@ -204,7 +196,7 @@ class ProgresoService {
       print('📈 [PROGRESO] Obteniendo estadísticas para: $userId');
 
       final response = await http.get(
-        Uri.parse('$baseUrl/$userId/estadisticas'),
+        Uri.parse('$baseUrl/$_mongoUserId/estadisticas'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': ApiService.headers['Authorization'] ?? '',
@@ -233,7 +225,7 @@ class ProgresoService {
       print('🎯 [PROGRESO] Obteniendo módulos para: $userId');
 
       final response = await http.get(
-        Uri.parse('$baseUrl/$userId/modulos'),
+        Uri.parse('$baseUrl/$_mongoUserId/modulos'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': ApiService.headers['Authorization'] ?? '',
@@ -271,7 +263,7 @@ class ProgresoService {
           'Authorization': ApiService.headers['Authorization'] ?? '',
         },
         body: json.encode({
-          'userId': userId,
+          'userId': _mongoUserId,
           'juegoId': juegoId,
           'datosPartida': datosPartida,
         }),
@@ -345,9 +337,9 @@ class ProgresoService {
   }
 
   // ✅ MÉTODOS AUXILIARES PARA DATOS DE EJEMPLO
-  static Map<String, dynamic> _crearProgresoVacio(String userId) {
+  static Map<String, dynamic> _crearProgresoVacio(String _mongoUserId) {
     return {
-      'user': userId,
+      'user': _mongoUserId,
       'puntuacionGlobal': 0,
       'tiempoTotalGlobal': 0,
       'nivelGlobal': 1,
