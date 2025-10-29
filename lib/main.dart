@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
 import 'pages/welcome_page.dart';
+import 'config/app_config.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    // ✅ INICIALIZAR CONFIGURACIÓN CON MANEJO DE ERRORES
+    await AppConfig.initialize();
+    print('✅ Configuración inicializada correctamente');
+  } catch (e) {
+    print('❌ Error inicializando configuración: $e');
+  }
+
   runApp(const MyApp());
 }
 

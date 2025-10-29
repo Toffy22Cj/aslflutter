@@ -13,19 +13,26 @@ dependencies:
     sdk: flutter
   http: ^1.1.0
   shared_preferences: ^2.2.2
+  connectivity_plus: ^6.0.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-flutter_icons:
+  flutter_launcher_icons: ^0.13.1
+
+# ✅ CONFIGURACIÓN CORREGIDA - SIN "flutter_icons" deprecated
+flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon/icon.png"
+  image_path: "assets/images/logo_final.png"
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/images/logo_final.png"
+  remove_alpha_ios: true  # ✅ PARA EVITAR EL WARNING DE iOS
+
 flutter:
   uses-material-design: true
+
   assets:
     - assets/images/
 
