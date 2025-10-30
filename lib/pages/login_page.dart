@@ -7,6 +7,7 @@ import '../widgets/comic_button.dart';
 import '../widgets/comic_text_field.dart';
 import '../widgets/loader.dart';
 import 'main_page.dart';
+import '../config/app_config.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -20,7 +21,14 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    print('🔄 [LOGIN] Página de login inicializada');
+  }
+
   void _showError(String message) {
+    print('❌ [LOGIN UI] Mostrando error: $message');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -59,7 +67,17 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    print('🔐 [LOGIN] === INICIANDO LOGIN ===');
+    print('📧 [LOGIN] Email: $email');
+    print('🔑 [LOGIN] Password: ${'*' * password.length}');
+    print('🌐 [LOGIN] URL Spring: ${AppConfig.springBaseUrl}');
+    print('🌐 [LOGIN] URL Node: ${AppConfig.nodeBaseUrl}');
+
+    if (email.isEmpty || password.isEmpty) {
+      print('❌ [LOGIN] Campos vacíos - Email: $email, Password vacío: ${password.isEmpty}');
       _showError('Por favor, completa todos los campos.');
       return;
     }
@@ -69,35 +87,60 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // Paso 1: Login en Spring Boot
-      final loginResponse = await AuthService.loginSpringBoot(
-        LoginRequest(
-          email: _emailController.text,
-          password: _passwordController.text,
-        ),
+      // ✅ PASO 1: VERIFICAR CONEXIÓN PRIMERO
+      print('🔍 [LOGIN] Verificando conexión con servidores...');
+      final conexionResultados = await AuthService.verificarConexionServidores();
+      print('📊 [LOGIN] Resultados conexión: $conexionResultados');
+
+      if (!conexionResultados['spring']!) {
+        print('❌ [LOGIN] Spring Boot no está accesible');
+        throw Exception('No se puede conectar al servidor de autenticación. Verifica que Spring Boot esté corriendo.');
+      }
+
+      // ✅ PASO 2: LOGIN EN SPRING BOOT
+      print('🚀 [LOGIN] Paso 1: Login en Spring Boot...');
+      final loginRequest = LoginRequest(
+        email: email,
+        password: password,
       );
 
-      // Paso 2: Sincronizar usuario en MongoDB
+      print('📤 [LOGIN] Enviando request: ${loginRequest.toJson()}');
+
+      final loginResponse = await AuthService.loginSpringBoot(loginRequest);
+
+      print('✅ [LOGIN] Login Spring Boot exitoso');
+      print('📋 [LOGIN] Respuesta: ID: ${loginResponse.id}, Nombre: ${loginResponse.nombre}');
+
+      // ✅ PASO 3: SINCRONIZAR CON MONGODB
+      print('🔄 [LOGIN] Paso 2: Sincronizando con MongoDB...');
       final syncResponse = await AuthService.syncUser(
-        loginResponse.id,
-        loginResponse.nombre,
-        loginResponse.email,
+        loginResponse.id!,
+        loginResponse.nombre!,
+        loginResponse.email!,
       );
 
-      // Guardar datos del usuario
+      print('✅ [LOGIN] Sincronización MongoDB exitosa');
+      print('📋 [LOGIN] MongoId: ${syncResponse['mongoId']}');
+
+      // ✅ PASO 4: GUARDAR DATOS DEL USUARIO
       final user = User(
         mongoId: syncResponse['mongoId'] ?? 'spring_${loginResponse.id}',
-        springId: loginResponse.id,
-        nombre: loginResponse.nombre,
-        email: loginResponse.email,
-        tipo: loginResponse.tipo,
-        token: loginResponse.token,
+        springId: loginResponse.id!,
+        nombre: loginResponse.nombre!,
+        email: loginResponse.email!,
+        tipo: loginResponse.tipo!,
+        token: loginResponse.token!,
       );
 
-      // Configurar token para futuras peticiones
-      AuthService.setAuthToken(loginResponse.token);
+      print('👤 [LOGIN] Usuario creado: ${user.nombre} (${user.email})');
 
-      // Navegar a la página principal
+      // ✅ PASO 5: CONFIGURAR TOKEN
+      AuthService.setAuthToken(loginResponse.token!);
+      print('🔑 [LOGIN] Token configurado para futuras peticiones');
+
+      // ✅ PASO 6: NAVEGAR A PÁGINA PRINCIPAL
+      print('🎯 [LOGIN] Navegando a MainPage...');
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -105,14 +148,40 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
 
+      print('✅ [LOGIN] Login completado exitosamente');
+
     } catch (e) {
-      _showError(e.toString());
+      print('❌ [LOGIN] ERROR DURANTE LOGIN: $e');
+      print('🔍 [LOGIN] Tipo de error: ${e.runtimeType}');
+      print('🔍 [LOGIN] Stack trace: ${e.toString()}');
+
+      String errorMessage = 'Error durante el login';
+
+      if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Timeout: El servidor no responde. Verifica la conexión.';
+        print('⏰ [LOGIN] Timeout detectado - Posible problema de red');
+      } else if (e.toString().contains('SocketException')) {
+        errorMessage = 'Error de conexión: No se puede alcanzar el servidor.';
+        print('🌐 [LOGIN] SocketException - Problema de red/URL');
+      } else if (e.toString().contains('401')) {
+        errorMessage = 'Credenciales incorrectas.';
+        print('🔐 [LOGIN] Error 401 - Credenciales inválidas');
+      } else if (e.toString().contains('403')) {
+        errorMessage = 'Cuenta no activada. Revisa tu correo.';
+        print('🚫 [LOGIN] Error 403 - Cuenta no activada');
+      } else if (e.toString().contains('500')) {
+        errorMessage = 'Error interno del servidor.';
+        print('💥 [LOGIN] Error 500 - Problema del servidor');
+      }
+
+      _showError('$errorMessage\nDetalle: ${e.toString()}');
     } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
+      print('🔚 [LOGIN] Proceso de login finalizado');
     }
   }
 

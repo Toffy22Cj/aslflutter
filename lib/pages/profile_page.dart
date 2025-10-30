@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/user_profile.dart';
 import '../services/profile_service.dart';
+import '../services/auth_service.dart'; // ✅ IMPORTAR AUTH SERVICE
 import '../widgets/comic_button.dart';
 import '../widgets/comic_text_field.dart';
 import '../widgets/loader.dart';
 import 'progreso_page.dart';
+import 'login_page.dart'; // ✅ IMPORTAR LOGIN PAGE
 
 class ProfilePage extends StatefulWidget {
   final int userId;
@@ -25,6 +27,7 @@ class _ProfilePageState extends State<ProfilePage> {
   late UserProfile _userProfile;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isLoggingOut = false; // ✅ CONTROLAR ESTADO DE LOGOUT
 
   // Controladores
   final TextEditingController _nombreController = TextEditingController();
@@ -79,6 +82,114 @@ class _ProfilePageState extends State<ProfilePage> {
         _isLoading = false;
       });
     }
+  }
+
+  // ✅ NUEVO MÉTODO: CERRAR SESIÓN
+  Future<void> _logout() async {
+    bool confirm = await _showLogoutConfirmation();
+    if (!confirm) return;
+
+    setState(() {
+      _isLoggingOut = true;
+    });
+
+    try {
+      print('🚪 [PROFILE] Iniciando cierre de sesión...');
+
+      // Llamar al servicio de logout
+      await AuthService.logout();
+
+      print('✅ [PROFILE] Sesión cerrada exitosamente');
+
+      // Navegar a la página de login y limpiar el stack
+      _navigateToLogin();
+
+    } catch (e) {
+      print('❌ [PROFILE] Error durante logout: $e');
+      _showError('Error al cerrar sesión: $e');
+    } finally {
+      setState(() {
+        _isLoggingOut = false;
+      });
+    }
+  }
+
+  // ✅ CONFIRMACIÓN DE CERRAR SESIÓN
+  Future<bool> _showLogoutConfirmation() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Cerrar Sesión',
+          style: TextStyle(
+            fontFamily: 'Bangers',
+            fontSize: 24,
+            color: Color(0xFF8B1E1E),
+          ),
+        ),
+        content: const Text(
+          '¿Estás seguro de que quieres cerrar sesión?',
+          style: TextStyle(fontSize: 16),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(
+                fontFamily: 'Bangers',
+                fontSize: 18,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black, width: 3),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black,
+                  offset: Offset(2, 2),
+                  blurRadius: 0,
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD322),
+                foregroundColor: Colors.black,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(0),
+                ),
+              ),
+              child: const Text(
+                'Sí, Cerrar',
+                style: TextStyle(
+                  fontFamily: 'Bangers',
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  // ✅ NAVEGAR A LOGIN Y LIMPIAR STACK
+  void _navigateToLogin() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+    );
   }
 
   Future<void> _saveProfile() async {
@@ -153,7 +264,7 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
-  // ✅ NUEVO MÉTODO: Navegar a la página de progreso
+  // ✅ NAVEgar a la página de progreso
   void _navigateToProgreso() {
     print('🎯 [PROFILE] Navegando a progreso para usuario: ${widget.userId}');
     Navigator.push(
@@ -446,7 +557,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                       const SizedBox(height: 25),
 
-                      // ✅ SECCIÓN DE OPCIONES ADICIONALES - MEJORADA Y VISIBLE
+                      // ✅ SECCIÓN DE OPCIONES ADICIONALES - CON CERRAR SESIÓN
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -480,7 +591,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             const SizedBox(height: 16),
 
-                            // ✅ BOTÓN PRINCIPAL DE PROGRESO - GRANDE Y DESTACADO
+                            // ✅ BOTÓN PRINCIPAL DE PROGRESO
                             Container(
                               width: double.infinity,
                               decoration: BoxDecoration(
@@ -542,6 +653,59 @@ class _ProfilePageState extends State<ProfilePage> {
                                   },
                                 ),
                               ],
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // ✅ BOTÓN DE CERRAR SESIÓN - DESTACADO
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF8B1E1E),
+                                border: Border.all(color: Colors.black, width: 4),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black,
+                                    offset: Offset(4, 4),
+                                    blurRadius: 0,
+                                  ),
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: _isLoggingOut ? null : _logout,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        if (_isLoggingOut)
+                                          const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            ),
+                                          )
+                                        else
+                                          const Icon(Icons.logout, color: Colors.white, size: 28),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          _isLoggingOut ? 'CERRANDO SESIÓN...' : 'CERRAR SESIÓN',
+                                          style: const TextStyle(
+                                            fontFamily: 'Bangers',
+                                            fontSize: 22,
+                                            color: Colors.white,
+                                            letterSpacing: 1,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
